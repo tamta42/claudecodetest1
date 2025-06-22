@@ -2,15 +2,20 @@ import email
 import os
 import pandas as pd
 import base64
+import platform
+from pathlib import Path
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 
 def extract_excel_from_eml(eml_file_path, output_dir="extracted_attachments"):
     """
-    Extract Excel attachments from an EML file
+    Extract Excel attachments from an EML file (cross-platform compatible)
     """
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    # Use pathlib for cross-platform path handling
+    output_path = Path(output_dir)
+    output_path.mkdir(exist_ok=True)
+    
+    print(f"Running on {platform.system()} - Output directory: {output_path.absolute()}")
     
     with open(eml_file_path, 'rb') as f:
         msg = email.message_from_bytes(f.read())
@@ -30,21 +35,23 @@ def extract_excel_from_eml(eml_file_path, output_dir="extracted_attachments"):
                         filename = decoded_header[0]
                 
                 if filename.endswith('.xlsx') or filename.endswith('.xls'):
-                    file_path = os.path.join(output_dir, filename)
+                    # Use pathlib for cross-platform path handling
+                    file_path = output_path / filename
                     with open(file_path, 'wb') as f:
                         f.write(part.get_payload(decode=True))
-                    excel_files.append(file_path)
-                    print(f"Extracted Excel file: {filename}")
+                    excel_files.append(str(file_path))
+                    print(f"Extracted Excel file: {filename} -> {file_path}")
     
     return excel_files
 
 def excel_to_csv(excel_file_path, csv_output_path=None):
     """
-    Convert Excel file to CSV (first sheet)
+    Convert Excel file to CSV (first sheet) - cross-platform compatible
     """
     if csv_output_path is None:
-        base_name = os.path.splitext(os.path.basename(excel_file_path))[0]
-        csv_output_path = f"{base_name}.csv"
+        # Use pathlib for cross-platform path handling
+        excel_path = Path(excel_file_path)
+        csv_output_path = excel_path.stem + ".csv"
     
     # Read the Excel file (first sheet by default)
     df = pd.read_excel(excel_file_path)
@@ -56,16 +63,18 @@ def excel_to_csv(excel_file_path, csv_output_path=None):
     return csv_output_path
 
 def main():
-    eml_file = "email1.eml"
+    # Use pathlib for cross-platform compatibility
+    eml_file = Path("email1.eml")
     
-    if not os.path.exists(eml_file):
+    if not eml_file.exists():
         print(f"Error: {eml_file} not found in current directory")
+        print(f"Current working directory: {Path.cwd()}")
         return
     
-    print(f"Processing {eml_file}...")
+    print(f"Processing {eml_file} on {platform.system()}...")
     
     # Extract Excel attachments
-    excel_files = extract_excel_from_eml(eml_file)
+    excel_files = extract_excel_from_eml(str(eml_file))
     
     if not excel_files:
         print("No Excel attachments found in the email")
